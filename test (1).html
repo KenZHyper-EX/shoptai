@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>SHOPTAI - HỆ THỐNG AUTO 2026</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; overflow-x: hidden; }
+        .page { display: none; min-height: 80vh; }
+        .page.active { display: block; animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Sidebar Responsive */
+        #sidebar { 
+            background: #1e293b; 
+            border-right: 1px solid #334155;
+            height: 100vh;
+            position: fixed;
+            left: 0; top: 0; width: 280px;
+            z-index: 150; padding-top: 80px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateX(-100%);
+        }
+        #sidebar.open { transform: translateX(0); }
+
+        /* Overlay khi mở menu trên mobile */
+        #sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            z-index: 140;
+        }
+        #sidebar-overlay.show { display: block; }
+
+        @media (min-width: 1025px) {
+            #sidebar { transform: translateX(0); }
+            .main-content { margin-left: 280px !important; }
+            #sidebar-overlay { display: none !important; }
+        }
+
+        .nav-item {
+            display: flex; align-items: center; gap: 15px;
+            padding: 14px 24px; color: #94a3b8; font-weight: 600;
+            transition: 0.2s; cursor: pointer;
+        }
+        .nav-item:hover { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+        .nav-item.active-menu { 
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0) 100%);
+            color: #60a5fa; border-left: 4px solid #3b82f6;
+        }
+
+        .header-bg { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border-bottom: 1px solid #334155; }
+        
+        /* Mobile Card & Grid */
+        .product-card { 
+            background: rgba(30, 41, 59, 0.7); 
+            border: 1px solid rgba(255, 255, 255, 0.05); 
+            border-radius: 1.5rem; 
+            transition: all 0.3s;
+        }
+        .product-card:hover { transform: translateY(-5px); border-color: #3b82f6; }
+
+        .category-btn {
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 18px; background: #1e293b;
+            border: 1px solid #334155; border-radius: 12px;
+            font-size: 13px; font-weight: 600; color: #94a3b8;
+            transition: 0.3s; white-space: nowrap;
+        }
+        .category-btn.active {
+            background: #3b82f6; color: white; border-color: #3b82f6;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1.5rem; }
+        .dark-input { background: #0f172a; border: 1px solid #334155; color: white; border-radius: 0.75rem; padding: 0.8rem; width: 100%; outline: none; }
+        
+        .quantity-btn { background: #334155; width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; }
+        .product-card.hidden { display: none; }
+    </style>
+</head>
+<body onload="initSystem()">
+
+    <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <nav class="fixed top-0 w-full header-bg z-[110] lg:pl-[280px]">
+        <div class="px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleSidebar()" class="header-icon-btn lg:hidden flex items-center justify-center bg-slate-800 w-10 h-10 rounded-lg border border-slate-700">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <a href="#" class="text-xl font-black text-blue-500 italic lg:hidden">SHOPTAI</a>
+                <div class="search-box hidden md:flex bg-[#1e293b] border border-slate-700 rounded-lg px-3 py-2 gap-2">
+                    <i class="fas fa-search text-slate-500 text-sm"></i>
+                    <input type="text" placeholder="Tìm sản phẩm..." class="bg-transparent outline-none text-sm w-full text-slate-300">
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <div id="balance-badge" class="hidden bg-green-500/10 border border-green-500/30 text-green-500 px-3 py-1.5 rounded-xl font-bold flex items-center gap-2 text-xs">
+                    <i class="fas fa-wallet"></i> <span>5.600₫</span>
+                </div>
+
+                <button id="btn-login-main" onclick="openAuth()" class="bg-blue-600 hover:bg-blue-700 text-white text-[10px] md:text-xs font-black px-4 py-2.5 rounded-xl uppercase transition">
+                    Đăng Nhập
+                </button>
+
+                <div id="user-info" class="hidden flex items-center gap-2 bg-[#1e293b] p-1 pr-3 rounded-full border border-slate-700">
+                    <img src="https://ui-avatars.com/api/?name=User&background=3b82f6&color=fff" class="w-8 h-8 rounded-full">
+                    <span class="text-xs font-bold text-slate-200">DANGKHOI</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <aside id="sidebar">
+        <div class="px-8 py-4 mb-4">
+            <a href="#" class="text-2xl font-black text-blue-500 italic tracking-tighter">SHOPTAI</a>
+        </div>
+        <div class="flex flex-col h-full">
+            <div onclick="changeMenu(this, 'trang-chu')" class="nav-item active-menu"><i class="fas fa-home"></i> Trang Chủ</div>
+            <div onclick="changeMenu(this, 'don-hang')" class="nav-item"><i class="fas fa-shopping-bag"></i> Đơn hàng</div>
+            <div onclick="changeMenu(this, 'nap-tien')" class="nav-item"><i class="fas fa-qrcode"></i> Nạp QR Code</div>
+            <div onclick="changeMenu(this, 'ho-tro')" class="nav-item"><i class="fas fa-headset"></i> Hỗ Trợ</div>
+        </div>
+    </aside>
+
+    <div class="main-content pt-24 pb-12 px-4 md:px-6">
+        
+        <main id="trang-chu" class="page active max-w-6xl mx-auto">
+            <div class="glass-card p-5 mb-8 border-slate-800">
+                <div class="flex items-center gap-3 mb-4">
+                    <i class="fas fa-archive text-blue-500 text-lg"></i>
+                    <h2 class="text-lg font-bold uppercase tracking-tight">Danh mục</h2>
+                </div>
+                <div class="flex flex-nowrap overflow-x-auto pb-2 gap-3 scrollbar-hide">
+                    <button class="category-btn active" onclick="filterProducts('all', this)">Tất cả</button>
+                    <button class="category-btn" onclick="filterProducts('premium', this)">Premium</button>
+                    <button class="category-btn" onclick="filterProducts('key', this)">Key VIP</button>
+                    <button class="category-btn" onclick="filterProducts('ipa', this)">Ipa Mod</button>
+                </div>
+            </div>
+
+            <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                <div class="product-card p-6 flex flex-col justify-between" data-category="ipa">
+                    <h3 class="font-black text-lg italic uppercase text-slate-100">ipa trắng bypass + aimbody</h3>
+                    <p class="text-blue-400 font-black text-2xl mt-2">250,000₫</p>
+                    <button onclick="openBuyPage('ipa trắng bypass + aimbody', 250000)" class="mt-6 w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase hover:bg-blue-700 transition active:scale-95">Mua Ngay</button>
+                </div>
+
+                <div class="product-card p-6 flex flex-col justify-between" data-category="key">
+                    <h3 class="font-black text-lg italic uppercase text-slate-100">key migul tuần</h3>
+                    <p class="text-blue-400 font-black text-2xl mt-2">120,000₫</p>
+                    <button onclick="openBuyPage('key migul tuần', 120000)" class="mt-6 w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase hover:bg-blue-700 transition active:scale-95">Mua Ngay</button>
+                </div>
+
+                <div class="product-card p-6 flex flex-col justify-between" data-category="premium">
+                    <h3 class="font-black text-lg italic uppercase text-slate-100">premium mod vip</h3>
+                    <p class="text-blue-400 font-black text-2xl mt-2">150,000₫</p>
+                    <button onclick="openBuyPage('premium mod vip', 150000)" class="mt-6 w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase hover:bg-blue-700 transition active:scale-95">Mua Ngay</button>
+                </div>
+            </div>
+        </main>
+
+        <main id="trang-mua" class="page">
+            <div class="max-w-md mx-auto">
+                <button onclick="showPage('trang-chu')" class="mb-6 text-slate-400 text-sm flex items-center gap-2"><i class="fas fa-arrow-left"></i> Quay lại</button>
+                <div class="glass-card p-6 md:p-8 border-blue-500/30">
+                    <h2 id="buy-product-name" class="text-xl md:text-2xl font-black text-blue-400 uppercase italic mb-2 text-center">Tên sản phẩm</h2>
+                    
+                    <div class="space-y-6 mt-8">
+                        <div>
+                            <label class="block text-[10px] mb-2 opacity-50 font-bold text-center uppercase">CHỌN SỐ LƯỢNG:</label>
+                            <div class="flex items-center justify-center gap-4">
+                                <button onclick="updateQty(-1)" class="quantity-btn">-</button>
+                                <input id="buy-quantity" type="number" value="1" min="1" class="dark-input text-center font-black text-xl w-24 md:w-32" oninput="calcTotal()">
+                                <button onclick="updateQty(1)" class="quantity-btn">+</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900/80 p-5 rounded-2xl border border-slate-700 text-center">
+                            <span class="font-bold text-xs text-blue-400 uppercase">Tổng thanh toán:</span>
+                            <div id="buy-total-price" class="text-3xl font-black text-white italic mt-1">0₫</div>
+                        </div>
+
+                        <button onclick="handlePurchase()" class="w-full bg-blue-600 py-5 rounded-2xl font-black uppercase shadow-lg transition active:scale-95">XÁC NHẬN MUA</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="auth-modal" class="fixed inset-0 z-[200] hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div class="glass-card w-full max-w-md p-8 border-blue-500/30 relative">
+            <button onclick="closeAuth()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
+            <div class="flex gap-6 mb-8 border-b border-slate-700/50">
+                <button id="tab-login" onclick="switchAuth('login')" class="pb-3 px-2 text-blue-500 border-b-2 border-blue-500 font-black uppercase text-sm">Đăng Nhập</button>
+                <button id="tab-register" onclick="switchAuth('register')" class="pb-3 px-2 text-slate-500 font-black uppercase text-sm">Đăng Ký</button>
+            </div>
+
+            <form id="form-login" class="space-y-5">
+                <input type="text" class="dark-input" placeholder="Tên tài khoản">
+                <input type="password" class="dark-input" placeholder="Mật khẩu">
+                <button type="button" onclick="confirmAuth()" class="w-full bg-blue-600 py-4 rounded-xl font-black uppercase hover:bg-blue-700 transition">Vào Hệ Thống</button>
+            </form>
+
+            <form id="form-register" class="space-y-5 hidden">
+                <input type="text" class="dark-input" placeholder="Tên tài khoản mới">
+                <input type="password" class="dark-input" placeholder="Mật khẩu">
+                <button type="button" onclick="confirmAuth()" class="w-full bg-indigo-600 py-4 rounded-xl font-black uppercase hover:bg-indigo-700 transition">Tạo Tài Khoản</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentProduct = { name: '', price: 0 };
+        let isLogged = false;
+
+        function initSystem() { 
+            // Khởi tạo hệ thống
+        }
+
+        function toggleSidebar() { 
+            document.getElementById('sidebar').classList.toggle('open'); 
+            document.getElementById('sidebar-overlay').classList.toggle('show');
+        }
+        
+        function filterProducts(category, btn) {
+            document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const cards = document.querySelectorAll('.product-card');
+            cards.forEach(card => {
+                if (category === 'all' || card.getAttribute('data-category') === category) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        }
+
+        function changeMenu(element, pageId) {
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active-menu'));
+            element.classList.add('active-menu');
+            showPage(pageId);
+            if(window.innerWidth < 1024) toggleSidebar();
+        }
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            const target = document.getElementById(pageId);
+            if(target) target.classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        function openBuyPage(name, price) {
+            currentProduct = { name, price };
+            document.getElementById('buy-product-name').innerText = name;
+            document.getElementById('buy-quantity').value = 1;
+            calcTotal();
+            showPage('trang-mua');
+        }
+
+        function updateQty(step) {
+            let input = document.getElementById('buy-quantity');
+            let val = parseInt(input.value) + step;
+            if (val < 1) val = 1;
+            input.value = val;
+            calcTotal();
+        }
+
+        function calcTotal() {
+            let qty = parseInt(document.getElementById('buy-quantity').value) || 1;
+            document.getElementById('buy-total-price').innerText = (qty * currentProduct.price).toLocaleString() + '₫';
+        }
+
+        function handlePurchase() {
+            if(!isLogged) {
+                alert('Vui lòng đăng nhập trước khi mua!');
+                openAuth();
+            } else {
+                alert('Đặt hàng thành công: ' + currentProduct.name);
+            }
+        }
+
+        function openAuth() { document.getElementById('auth-modal').classList.remove('hidden'); document.getElementById('auth-modal').classList.add('flex'); }
+        function closeAuth() { document.getElementById('auth-modal').classList.add('hidden'); document.getElementById('auth-modal').classList.remove('flex'); }
+
+        function switchAuth(type) {
+            const lForm = document.getElementById('form-login');
+            const rForm = document.getElementById('form-register');
+            const tL = document.getElementById('tab-login');
+            const tR = document.getElementById('tab-register');
+            if(type === 'login') {
+                lForm.classList.remove('hidden'); rForm.classList.add('hidden');
+                tL.classList.add('text-blue-500', 'border-b-2', 'border-blue-500'); 
+                tR.classList.remove('text-blue-500', 'border-b-2', 'border-blue-500');
+            } else {
+                lForm.classList.add('hidden'); rForm.classList.remove('hidden');
+                tR.classList.add('text-blue-500', 'border-b-2', 'border-blue-500'); 
+                tL.classList.remove('text-blue-500', 'border-b-2', 'border-blue-500');
+            }
+        }
+
+        function confirmAuth() {
+            isLogged = true;
+            closeAuth();
+            document.getElementById('btn-login-main').classList.add('hidden');
+            document.getElementById('user-info').classList.remove('hidden');
+            document.getElementById('balance-badge').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
